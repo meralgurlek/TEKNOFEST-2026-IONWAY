@@ -1,0 +1,56 @@
+/*
+ * IONWAY - EHD Thruster Control System
+ * Board: ESP32 / Arduino Nano
+ * Purpose: Controlling High Voltage Module via PWM and Monitoring Power
+ */
+
+#include <Arduino.h>
+
+// Pin Definitions
+const int HV_PWM_PIN = 18;      // PWM output for High Voltage Module
+const int SOLAR_VOLT_PIN = 34;  // Analog input for Solar Voltage
+const int BATT_VOLT_PIN = 35;   // Analog input for Battery Voltage
+
+// PWM Parameters
+const int freq = 5000;
+const int ledChannel = 0;
+const int resolution = 8; // 0-255
+
+void setup() {
+  Serial.begin(115200);
+  
+  // Configure PWM for HV Module
+  ledcSetup(ledChannel, freq, resolution);
+  ledcAttachPin(HV_PWM_PIN, ledChannel);
+  
+  Serial.println("IONWAY System Initialized...");
+}
+
+void loop() {
+  // Read Sensor Values
+  int solarVal = analogRead(SOLAR_VOLT_PIN);
+  int battVal = analogRead(BATT_VOLT_PIN);
+  
+  // Calculate Voltages (Simplified)
+  float solarVolt = solarVal * (3.3 / 4095.0) * 11.0; // Assuming 1/11 voltage divider
+  float battVolt = battVal * (3.3 / 4095.0) * 11.0;
+  
+  // Power Management Logic
+  int thrustPower = 0;
+  if (battVolt > 11.1) { // If battery is safe
+    thrustPower = 150;    // Set thrust to 60%
+  } else {
+    thrustPower = 50;     // Low power mode
+    Serial.println("Warning: Low Battery! Entering Power Save Mode.");
+  }
+  
+  // Apply Thrust
+  ledcWrite(ledChannel, thrustPower);
+  
+  // Debug Output
+  Serial.print("Solar: "); Serial.print(solarVolt);
+  Serial.print("V | Batt: "); Serial.print(battVolt);
+  Serial.print("V | Thrust: "); Serial.println(thrustPower);
+  
+  delay(1000);
+}
